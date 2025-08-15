@@ -1,0 +1,13 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: deepseek
+  namespace: llama-serve
+  annotations:
+    haproxy.router.openshift.io/timeout: 2m
+spec:
+  to:
+    kind: Service
+    name: deepseek
+  port:
+    targetPort: 8000

@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: granite
+  namespace: llama-serve
+  labels:
+    app: granite
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: granite
+  template:
+    metadata:
+      labels:
+        app: granite
+    spec:
+      containers:
+        - name: granite
+          image: 'registry.redhat.io/rhaiis/vllm-cuda-rhel9:3.2.0-1754088865-hotfix-1'
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - '-m'
+            - vllm.entrypoints.openai.api_server
+          args:
+            - '--port=8000'
+            - '--model=/mnt/models'
+            - '--served-model-name=granite'
+            - '--tensor-parallel-size=1'
+            - '--max-model-len=120000'
+            - '--gpu-memory-utilization=0.9'
+            - '--enable-auto-tool-choice'
+            - '--tool-call-parser'
+            - granite
+            - '--chat-template'
+            - /app/data/template/tool_chat_template_granite.jinja
+          resources:
+            limits:
+              cpu: '10'
+              memory: 32Gi
+              nvidia.com/gpu: '1'
+            requests:
+              cpu: '2'
+              memory: 6Gi
+              nvidia.com/gpu: '1'
+          volumeMounts:
+            - name: cache-volume
+              mountPath: /mnt/models
+              subPath: granite-3.2-8b-instruct
+            - name: shm
+              mountPath: /dev/shm 
+      volumes:
+        - name: cache-volume
+          persistentVolumeClaim:
+            claimName: models
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
+      restartPolicy: Always
